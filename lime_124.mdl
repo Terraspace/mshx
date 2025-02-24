@@ -1,0 +1,24 @@
+mdl 1.3;
+
+using state import *;
+
+import adobe::mtl::*;
+import adobe::util::*;
+import ::tex::gamma_mode;
+import ::state::normal;
+
+export material lime_124_Mat(*)
+  = adobe::mtl::standard(
+    translucence : float(0),
+    interiorColor : color(1.0, 1.0, 1.0),
+    indexOfRefraction : float(0.6667),
+    metallic : float(0.0),
+    baseColor : adobe::util::color_texture( texture_2d("lime_124/lime_124_baseColor.png", ::tex::gamma_srgb) ),
+    roughness : adobe::util::float_texture( texture_2d("lime_124/lime_124_roughness.png", ::tex::gamma_linear) ),
+    density : float(0),
+    glow : float(0.0),
+    opacity : float(1.0),
+    normal : adobe::util::normal_texture( texture_2d("lime_124/lime_124_normal.png", ::tex::gamma_linear) ),
+    height : float(0.5),
+    heightScale : float(1.0)
+    );

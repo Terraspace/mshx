@@ -1,0 +1,540 @@
+// Booklist: https://github.com/dariubs/GoBooks
+// Language tour: https://go.dev/tour/list
+// Documentation: https://go.dev/doc/
+// Package refernce: https://pkg.go.dev/
+// Go by example: https://gobyexample.com/
+// Effective Go: https://golang.org/doc/effective_go.html
+
+// Go is comprised of modules, which are collections of packages
+// A package is a collection of source files in the same directory that are compiled together
+// A module is a collection of related Go packages that are versioned together as a single unit
+// The module name is the import path of the module that provides the package
+
+// The package name is the last element of the import path
+// Items in a package that start with a capital letter are exported and can be used outside the package
+
+// The main package is special, it defines a standalone executable program
+
+// functions can return multiple values
+// functions are declared with the func keyword followed by the function's name, parameters, and return type
+// the return type comes after the parameter list
+// if the function returns multiple values, the return types are enclosed in parentheses
+// if a function returns multiple values, the caller must handle all of them
+// if a function returns multiple values, the return statement can be used without any arguments to return the named return values
+// eg:
+// func add(x int, y int) int {
+//	return x + y
+//}
+// func swap(x, y string) (string, string) {
+//	return y, x
+//}
+// func split(sum int) (x, y int) {
+//	x = sum * 4 / 9
+//	y = sum - x
+//	return // naked return
+//}
+
+// to start a new go module:
+// go mod init example.com/hello
+// go build
+// ./hello
+// or go run .
+// or go run hello.go
+// to add a dependency:
+// go get rsc.io/quote
+// go mod tidy (remove unused dependencies and add missing ones)
+// go list -m all (list all dependencies)
+// to work with a local module dependency:
+// go mod edit -replace example.com/greetings=../greetings
+// go mod tidy
+
+//go build, which builds Go binaries using only information in the source files themselves, no separate makefiles
+//go test, for unit testing and microbenchmarks as well as fuzzing
+//go fmt, for formatting code
+//go install, for retrieving and installing remote packages
+//go vet, a static analyzer looking for potential errors in code
+//go run, a shortcut for building and executing code
+//go doc, for displaying documentation
+//go generate, a standard way to invoke code generators
+//go mod, for creating a new module, adding dependencies, upgrading dependencies, etc.
+//go tool, for invoking developer tools (added in Go version 1.24)
+
+package main
+
+import (
+	"encoding/json"
+	"example/greetings"
+	"fmt"
+	"io/ioutil"
+	"log"
+
+	"math"
+	"math/cmplx"
+	"math/rand"
+	"os"
+	"reflect"
+	"runtime"
+	"strconv"
+	"time"
+
+	// some other useful ones
+	//"readers"
+	//"io"
+	//"strings"
+	//"image"
+	"rsc.io/quote"
+)
+
+// Variables can be declared in a block:
+var (
+	ToBe   bool       = false
+	MaxInt uint64     = 1<<64 - 1
+	z      complex128 = cmplx.Sqrt(-5 + 12i)
+	name   string     = "Bob Smith"
+)
+
+// Or on their own:
+var rnd float32 = rand.Float32()
+
+// Types can be inferred
+var myname = "Alice"
+
+// Variables without initializers are zero-valued
+// 0 for numbers, false for booleans, "" for strings
+
+// Type casting is explicit in Go use T(v) to cast v to type T
+
+const Pi float32 = 3.14
+
+// Constants can be character, string, boolean, or numeric values
+// They cannot be declared with shorthand :=
+
+// structs, accessed via dot notation
+type Vertex struct {
+	X int
+	Y int
+}
+type Account struct {
+	accountBalance int32
+	owner          string
+	id             int
+}
+
+// structs can be nested
+// declare with var acc Account{20.2, "Bob", 1}
+
+// methods can be attached to structs
+func (a Account) string() string {
+	return fmt.Sprintf("Owner: %s, Id: %d, Balance: %s", a.owner, a.id, a.accountBalance)
+}
+
+// And on primitive types
+// You can only declare a method with a receiver whose type is defined in the same package as the method.
+// You cannot declare a method with a receiver whose type is defined in another package (which includes the built-in types such as int).
+type MyFloat float64
+
+func (f MyFloat) Abs() float64 {
+	if f < 0 {
+		return float64(-f)
+	}
+	return float64(f)
+}
+
+// methods should take a pointer receiver to be able to modify the original value/struct otherwise they work on a copy
+func (v *Vertex) Scale(f int) {
+	v.X = v.X * f
+	v.Y = v.Y * f
+}
+
+// the empty interface interface{}
+// structs implement interfaces implicitly, there is no expression of intent
+// the interface can be passed to methods/funcs
+// type assertions can be used to determine the type of an interface{} value
+// eg. shape.(Rectangle).width if you wanted to access the Rectangle .width property on a shape interface instance
+
+func add(x int, y int) int {
+	return x + y
+}
+
+// Generic functions - using the comparable constraint
+// Index returns the index of x in s, or -1 if not found.
+func Index[T comparable](s []T, x T) int {
+	for i, v := range s {
+		// v and x are type T, which has the comparable
+		// constraint, so we can use == here.
+		if v == x {
+			return i
+		}
+	}
+	return -1
+}
+
+// Generic types
+// List represents a singly-linked list that holds
+// values of any type.
+type List[T any] struct {
+	next *List[T]
+	val  T
+}
+
+// MyConstraint is a type constraint that allows any type with an underlying type of int or float64
+type MyConstraint interface {
+    ~int | ~float64
+}
+
+// PrintValue prints the value of a type that satisfies MyConstraint
+func PrintValue[T MyConstraint](value T) {
+    fmt.Println(value)
+}
+
+// JSON
+type Product struct {
+	Id   int    `json: "id"`
+	Name string `json: "name"`
+}
+type Products struct {
+	Products []Product `json: "products"`
+}
+
+// Creating enumerations
+type ByteSize float64
+
+const (
+	_           = iota // ignore first value by assigning to blank identifier
+	KB ByteSize = 1 << (10 * iota)
+	MB
+	GB
+)
+
+// more on generics
+type Number interface {
+	~int | ~float64 | ~float32 | ~int32 | ~int64
+}
+
+func Add[T Number](nums ...T) T {
+	var sum T
+	for _, v := range nums {
+		sum += v
+	}
+	return sum
+}
+
+func dostuff() {
+	add := Add[int]             // Type instantiation
+	println(add(1, 2, 3, 4, 5)) // 15
+
+	res := Add(1.1, 2.2, 3.3, 4.4, 5.5) // Type Inference
+	println(res)
+
+	len := 2
+	println(len) // +1.650000e+001
+}
+
+// dont forget GO has new and make .. new for zeroed mem of basic types,
+// single instances of structs, and arrays and make for slices, maps and channels
+// new(T) returns *T, make(T) returns T
+
+func main() {
+
+	var fileName string = os.Args[1]
+	fmt.Println(fileName)
+
+	// Use reflection to get a variable type
+	fmt.Println(reflect.TypeOf(ToBe))
+
+	//fmt.Println(add(os.Args[2], os.Args[3])) wont compile as args are strings, need to use strconv package
+	x, _ := strconv.Atoi(os.Args[2])
+	y, _ := strconv.Atoi(os.Args[3])
+	fmt.Println(add(x, y))
+	// how do we use dont care char with explicit type? - cant
+
+	// Use ParseInt instead of atoi
+	//a, _ := strconv.ParseInt(os.Args[1], 10, 64)
+	// also use strconv.Itoa
+
+	// Only inside a func can a variable be declared with shorthand:
+	k := 3.2
+	fmt.Println(k)
+
+	var i int = 1
+	//var i, j int = 1, 2 // if same type, can be declared like this
+	var l int = int(k)
+	// see: https://gobyexample.com/string-formatting
+	fmt.Printf("String interpolation %s %d %d %f\n", myname, i, l, k)
+
+	// No terminating semicolons are needed in Go
+	// if statements require braces but no parentheses
+	// logical operators are && || !
+	if k > 3 {
+		fmt.Println("k is greater than 3")
+	} else if k < 2 {
+		fmt.Println("k is less than 2")
+	} else {
+		fmt.Println("k is between 2 and 3")
+	}
+	log.SetPrefix("greetings: ")
+	log.SetFlags(0)
+
+	fmt.Println("Hello, World!")
+	fmt.Println(quote.Go())
+
+	message, err := greetings.Hello("Bob")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(message)
+
+	// There are no while loops, but use for without pre and increment parts, also no ( )
+outerLabel:
+	for i := 0; i < 10; i++ {
+		fmt.Println(i)
+		for k := 0; k < 10; k++ {
+			break outerLabel
+		}
+	}
+
+	// foreach style
+	for i, s := range []int{1, 2, 3} {
+		fmt.Println(i, s)
+	}
+
+	// you have continue/break as per normal and break label
+	// inifite loop with:
+	//for {
+	//}
+
+	// if statements can start with a short pre-statement
+	//if v := math.Pow(x, n); v < lim {
+	//	return v
+	//}
+
+	//the defer statement defers the execution of a function until the surrounding function returns
+	defer fmt.Println("world")
+	// multiple defers are execited in LIFO order
+
+	// switch as expected, no need for break - only the selected case runs
+	// runs top to bottom, and case values can be dynamic
+	switch os := runtime.GOOS; os {
+	case "darwin":
+		fmt.Println("OS X.")
+	case "linux":
+		fmt.Println("Linux.")
+	default:
+		// freebsd, openbsd,
+		// plan9, windows...
+		fmt.Printf("%s.\n", os)
+	}
+
+	// without switch condition, can be shorter form of if else chains
+	t := time.Now()
+	switch {
+	case t.Hour() < 12:
+		fmt.Println("Good morning!")
+	case t.Hour() < 17:
+		fmt.Println("Good afternoon.")
+	default:
+		fmt.Println("Good evening.")
+	}
+
+	// Go has pointers, but no pointer arithmetic
+	var p *int
+	var someNo int = 42
+	p = &someNo
+	fmt.Println(*p)
+
+	// struct pointers can be used like
+	// (*p).X to access members, but you can simplify with dot notation
+	v := Vertex{1, 2}
+	p2 := &v
+	p2.X = 1e9
+	fmt.Println(v)
+
+	// struct literals - you can list just a subset of fields using the Name: syntax
+	//v1 := Vertex{1, 2}  // has type Vertex
+	//v2 := Vertex{X: 1}  // Y:0 is implicit
+	//v3 := Vertex{}      // X:0 and Y:0
+	//p3 := &Vertex{1, 2} // has type *Vertex
+
+	// Read input with scan, can do 1 or more inputs (newline or space separated)
+	var a1, a2 string
+	fmt.Scan(&a1, &a2)
+	// Use scanf for formatted input
+	var prefix string
+	var no int
+	// in110
+	fmt.Scanf("%3s%d", &prefix, &no)
+	fmt.Printf("prefix: %s, invoice no: %d", prefix, no)
+
+	// Arrays (fixed size)
+	var arr [10]int
+	arr[0] = 42
+	ids := [...]int{1, 2, 3, 4} // you can use ... to infer size/capacity .. capacity can be greater than the element count = size
+	fmt.Println(ids)
+
+	// Slices (resizable view of an array) - has a size and capacity, zero value is nil with no underlying array
+	// can contain any type, even other slices
+	primes := [6]int{2, 3, 5, 7, 11, 13}
+	var s []int = primes[1:4] // half open range, includes first, excludes last
+	fmt.Println(s)            // slices are like references to arrays, changing data modifies the underlying array
+
+	// Slice literals
+	//[3]bool{true, true, false} array
+	//[]bool{true, true, false} creates array like above, but immediately a slice to it
+
+	// slice bound defaults is array size and low or high can be omitted
+	s2 := primes[:]
+	fmt.Println(s2)
+
+	// slices have a length and capacity
+	len2 := len(s2)
+	cap2 := cap(s2)
+	fmt.Println(len2, cap2)
+
+	// dynamically allocated slices with make
+	// To specify a capacity, pass a third argument to make:
+	b := make([]int, 0, 5) // len(b)=0, cap(b)=5
+	fmt.Println(b)
+	// re-slicing a slice
+	b = b[:cap(b)] // len(b)=5, cap(b)=5
+	b = b[1:]      // len(b)=4, cap(b)=4
+
+	b = append(b, 2, 3, 4) // append N values of T to slice of T, if backing array not big enough, new array is allocated
+
+	// You can copy slices with copy
+	arr2 := [3]int{1, 2, 3}
+	dest := make([]int, 5)
+	copy(dest, arr2[0:2]) // copies slice {1,2} into dest
+	fmt.Println(dest)     // [1 2 0 0 0]
+
+	// range for loops for iterating over slices or maps
+	var pow = []int{1, 2, 4, 8, 16, 32, 64, 128}
+	for i, v := range pow {
+		fmt.Printf("2**%d = %d\n", i, v)
+	} // either index or value can be discarded with _
+
+	// Maps, zero value is nil, and neither keys nor values can be added
+	// once again, created with make
+	m := make(map[string]Vertex)
+	m["Bell Labs"] = Vertex{
+		40, 20,
+	}
+	fmt.Println(m["Bell Labs"])
+
+	// Map literals
+	type Coord struct {
+		Lat, Long float64
+	}
+
+	var m2 = map[string]Coord{
+		"Bell Labs": Coord{
+			40.68433, -74.39967,
+		},
+		"Google": Coord{
+			37.42202, -122.08408,
+		},
+	}
+	// If top level is just type name, ommit it from elements
+	var m3 = map[string]Coord{
+		"Bell Labs": {40.68433, -74.39967},
+		"Google":    {37.42202, -122.08408},
+	}
+	fmt.Println(m2)
+	fmt.Println(m3)
+
+	//m[key] = elem         update or add
+	//elem = m[key]         return
+	//delete(m, key)        remove element
+	//elem, ok = m[key]     check for existence and return
+
+	// functions are first class and can be passed around like values
+	hypot := func(x, y float64) float64 {
+		return math.Sqrt(x*x + y*y)
+	}
+	fmt.Println(hypot(5, 12))
+
+	// functions can be closure, with scope bound to parent function
+
+	// panic/recover for critical failures, idiomatic is to use err returns
+	// use runtime/debug pkg - debug.Stack() to print stack trace
+	// use logging .. add log import. ... log.Println(err) and log.SetOutput(os.Stderr) .. log.SetOutput(f)
+
+	// include errors package
+	//var NoTooSmall = errors.New("the number is too small") // create an error
+
+	// Working with JSON
+	str := `{ "name": "my product", "id": 1 }`
+	product := Product{}
+	json.Unmarshal([]byte(str), &product)
+	fmt.Println(product) // prints the object
+
+	file, _ := ioutil.ReadFile("products.json")
+	data := Products{}
+	_ = json.Unmarshal([]byte(file), &data)
+
+	for i := 0; i < len(data.Products); i++ {
+		fmt.Println("Product Id: ", data.Products[i].Id)
+		fmt.Println("Name: ", data.Products[i].Name)
+	}
+
+	// go routines are lightweight runtime threads
+	go say("world")
+	say("hello")
+
+	ch := make(chan int)
+	ch <- 1 // send a value to a channel
+	value := <-ch
+	println(value)
+	close(ch)
+}
+
+func say(s string) {
+	for i := 0; i < 5; i++ {
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println(s)
+	}
+}
+
+// go basic types:
+// bool string
+// int int8 int16 int32 int64
+// uint uint8 uint16 uint32 uint64
+// uintptr
+// byte // alias for uint8
+// rune // alias for int32 // represents a Unicode code point
+// float32 float64
+// complex64 complex128
+
+func doSomething() {
+
+}
+
+func doSomething2(a int) {
+
+}
+
+func doSomething3(a int, b string) int {
+	return 2
+}
+
+// Tuple returns
+func doSomething4(a int, b string) (int, string) {
+	return 2, "test"
+}
+
+// Named return, with naked return (only for short funcs)
+func doSomething5(a int) (x int) {
+	x = 2
+	return
+}
+
+func Pic(dx, dy int) [][]uint8 {
+	var result = make([][]uint8, dy, dy)
+	for i := 0; i < dy; i++ {
+		result[i] = make([]uint8, dx, dx)
+		for j := 0; j < dx; j++ {
+			result[i][j] = uint8((i + j) / 2)
+		}
+	}
+	return result
+}

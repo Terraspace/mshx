@@ -1,0 +1,17 @@
+newmtl lime_124_Mat
+Ni 0.666
+Ka 0 0 0
+Pm 1
+d 1.0
+Ke 0.0
+Kd 1 1 1
+adobe_map_normal lime_124/lime_124_normal.png
+map_Kd lime_124/lime_124_baseColor.png
+Tr 0
+illum 7
+Ks 1 1 1
+adobe_map_roughness lime_124/lime_124_roughness.png
+adobe_interior_color 1.0 1.0 1.0
+adobe_density 0
+Ns 16
+adobe_translucence 0
