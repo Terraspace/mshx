@@ -712,6 +712,9 @@ func main() {
 	}
 
 	// Process material names to index values.
+	if !*silentPtr {
+		fmt.Println("Faces before mesh optimsation:")
+	}
 	for i := range faces {
 		faces[i].materialID = materialMap[faces[i].materialName]
 		if !*silentPtr {
@@ -721,7 +724,15 @@ func main() {
 
 	// Optimize the mesh data.
 	if *moPtr {
+		if !*silentPtr {
+			fmt.Println("Faces after mesh optimsation:")
+		}
 		OptimiseMesh()
+		if !*silentPtr {
+			for i := range faces {
+				fmt.Println(faces[i])
+			}
+		}
 	}
 
 	// Generate the bounding sphere.
