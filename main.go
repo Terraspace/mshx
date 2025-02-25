@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -553,8 +554,59 @@ func FakeQuadCheck(f *Face) {
 	}
 }
 
+func Morton3D(x, y, z uint32) uint32 {
+	return interleaveBits(x) | (interleaveBits(y) << 1) | (interleaveBits(z) << 2)
+}
+
+func interleaveBits(x uint32) uint32 {
+	x = (x | (x << 16)) & 0x030000FF
+	x = (x | (x << 8)) & 0x0300F00F
+	x = (x | (x << 4)) & 0x030C30C3
+	x = (x | (x << 2)) & 0x09249249
+	return x
+}
+
 func OptimiseMesh() {
-	//todo
+	// Use the bounding sphere to define a conservative spatial extent for the mesh
+	var extents = [6]float32{boundSphere.center.X - boundSphere.radius, boundSphere.center.Y - boundSphere.radius, boundSphere.center.Z - boundSphere.radius,
+		boundSphere.center.X + boundSphere.radius, boundSphere.center.Y + boundSphere.radius, boundSphere.center.Z + boundSphere.radius}
+
+	for i := 0; i < len(faces); i++ {
+		// Find the centroid of the face
+		var cx float32 = 0.0
+		var cy float32 = 0.0
+		var cz float32 = 0.0
+		for j := 0; j < int(faces[i].edges); j++ {
+			cx += vertices[faces[i].v[j]].X
+			cy += vertices[faces[i].v[j]].Y
+			cz += vertices[faces[i].v[j]].Z
+		}
+		cx /= float32(faces[i].edges)
+		cy /= float32(faces[i].edges)
+		cz /= float32(faces[i].edges)
+
+		// Normalize the centroid to [0.0 - 1.0] within the bounding sphere range
+		cx = cx - extents[0]/(extents[3]-extents[0])
+		cy = cy - extents[1]/(extents[4]-extents[1])
+		cz = cz - extents[2]/(extents[5]-extents[2])
+
+		// Quantize the normalized value in the range [0 - 1024]
+		var icx uint32 = uint32(cx * 1024.0)
+		var icy uint32 = uint32(cy * 1024.0)
+		var icz uint32 = uint32(cz * 1024.0)
+
+		faces[i].mortonCode = Morton3D(icx, icy, icz)
+	}
+
+	// Sort the faces based on their Morton Code
+	slices.SortFunc(faces, func(a, b Face) int {
+		if a.mortonCode < b.mortonCode {
+			return -1
+		} else if a.mortonCode > b.mortonCode {
+			return 1
+		}
+		return 0
+	})
 }
 
 func main() {

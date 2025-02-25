@@ -35,6 +35,7 @@ type Face struct {
 	uv           []uint32
 	materialID   uint32
 	materialName string
+	mortonCode   uint32
 }
 
 const ILLUM0 uint32 = 0   // Color on and Ambient off
