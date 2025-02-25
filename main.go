@@ -321,7 +321,7 @@ func ProcessOBJFile(inputFile *os.File) error {
 		lineParts := strings.Split(line, " ")
 		switch lineParts[0] {
 		case "v":
-			var vertex Vertex = Vertex{0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+			var vertex Vertex = Vertex{0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, false}
 			if len(lineParts) == 4 {
 				fmt.Sscanf(line, "v %f %f %f", &vertex.X, &vertex.Y, &vertex.Z)
 			} else if len(lineParts) == 5 {
@@ -607,6 +607,40 @@ func OptimiseMesh() {
 		}
 		return 0
 	})
+
+	// Create a lookup of all the faces that use a particular vertex for faster
+	// updating when we need to remap the vertex indices.
+	vertexFaceUse := make([][]uint32, len(vertices))
+	for i := 0; i < len(faces); i++ {
+		for j := 0; j < int(faces[i].edges); j++ {
+			vidx := faces[i].v[j]
+			vertexFaceUse[vidx] = append(vertexFaceUse[vidx], uint32(i))
+		}
+	}
+
+	var newVertices = []Vertex{}
+	var curIndex = 0
+	for i := 0; i < len(faces); i++ {
+		for j := 0; j < int(faces[i].edges); j++ {
+			vidx := faces[i].v[j]
+			if !vertices[vidx].flushed {
+				for k := 0; k < len(vertexFaceUse[vidx]); k++ {
+					face := faces[vertexFaceUse[vidx][k]]
+					for l := 0; l < int(face.edges); l++ {
+						if face.v[l] == vidx {
+							face.v[l] = uint32(curIndex)
+						}
+					}
+				}
+				RemoveAtIndex(vertexFaceUse, int(vidx))
+				newVertices = append(newVertices, vertices[vidx])
+				vertices[faces[i].v[j]].flushed = true
+				curIndex++
+			}
+		}
+	}
+
+	vertices = newVertices
 }
 
 func main() {

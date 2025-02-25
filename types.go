@@ -3,6 +3,7 @@ package main
 type Vertex struct {
 	X, Y, Z, W float32
 	A, R, G, B float32
+	flushed    bool
 }
 
 type Normal struct {
