@@ -570,6 +570,11 @@ func interleaveBits(x uint32) uint32 {
 }
 
 func DeDupe(vT, nT, uvT float64) {
+
+	var dupeV int = 0
+	var dupeN int = 0
+	var dupeU int = 0
+
 	// Vertices
 	for i := 0; i < len(vertices); i++ {
 		if !vertices[i].flushed {
@@ -596,6 +601,7 @@ func DeDupe(vT, nT, uvT float64) {
 	for i := 0; i < len(vertices); i++ {
 		if vertices[i].flushed {
 			vertices = RemoveAtIndex(vertices, i)
+			dupeV++
 			i--
 		}
 	}
@@ -625,6 +631,7 @@ func DeDupe(vT, nT, uvT float64) {
 	for i := 0; i < len(normals); i++ {
 		if normals[i].flushed {
 			normals = RemoveAtIndex(normals, i)
+			dupeN++
 			i--
 		}
 	}
@@ -653,9 +660,14 @@ func DeDupe(vT, nT, uvT float64) {
 	for i := 0; i < len(textureCoords); i++ {
 		if textureCoords[i].flushed {
 			textureCoords = RemoveAtIndex(textureCoords, i)
+			dupeU++
 			i--
 		}
 	}
+
+	fmt.Printf("Removed %d duplicate vertices.\n", dupeV)
+	fmt.Printf("Removed %d duplicate normals.\n", dupeN)
+	fmt.Printf("Removed %d duplicate texture coords.\n", dupeU)
 
 }
 
