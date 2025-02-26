@@ -580,89 +580,107 @@ func DeDupe(vT, nT, uvT float64) {
 	// Vertices
 	for i := 0; i < len(vertices); i++ {
 		if !vertices[i].flushed {
-			for j := 0; j < len(vertices); j++ {
-				if i != j {
-					dx := vertices[i].X - vertices[j].X
-					dy := vertices[i].Y - vertices[j].Y
-					dz := vertices[i].Z - vertices[j].Z
-					d := math.Sqrt(float64(dx*dx + dy*dy + dz*dz))
-					if d < vT {
-						for k := 0; k < len(faces); k++ {
-							for l := 0; l < int(faces[k].edges); l++ {
-								if faces[k].v[l] == uint32(j) {
-									faces[k].v[l] = uint32(i)
-								}
-							}
+			continue
+		}
+		for j := i + 1; j < len(vertices); j++ {
+			dx := vertices[i].X - vertices[j].X
+			dy := vertices[i].Y - vertices[j].Y
+			dz := vertices[i].Z - vertices[j].Z
+			d := math.Sqrt(float64(dx*dx + dy*dy + dz*dz))
+			if d < vT {
+				for k := 0; k < len(faces); k++ {
+					for l := 0; l < int(faces[k].edges); l++ {
+						if faces[k].v[l] == uint32(j) {
+							faces[k].v[l] = uint32(i)
 						}
-						vertices[j].flushed = true
 					}
 				}
+				vertices[j].flushed = true
+				dupeV++
 			}
 		}
 	}
 	for i := 0; i < len(vertices); i++ {
 		if vertices[i].flushed {
 			vertices = RemoveAtIndex(vertices, i)
-			dupeV++
+			for j := 0; j < len(faces); j++ {
+				for l := 0; l < int(faces[j].edges); l++ {
+					if faces[j].v[l] > uint32(i) {
+						faces[j].v[l]--
+					}
+				}
+			}
 			i--
 		}
 	}
 
 	// Normals
 	for i := 0; i < len(normals); i++ {
-		if !normals[i].flushed {
-			for j := 0; j < len(normals); j++ {
-				if i != j {
-					dx := math.Abs(float64(normals[i].X - normals[j].X))
-					dy := math.Abs(float64(normals[i].Y - normals[j].Y))
-					dz := math.Abs(float64(normals[i].Z - normals[j].Z))
-					if dx < nT && dy < nT && dz < nT {
-						for k := 0; k < len(faces); k++ {
-							for l := 0; l < int(faces[k].edges); l++ {
-								if faces[k].n[l] == uint32(j) {
-									faces[k].n[l] = uint32(i)
-								}
-							}
+		if normals[i].flushed {
+			continue
+		}
+		for j := i + 1; j < len(normals); j++ {
+			dx := math.Abs(float64(normals[i].X - normals[j].X))
+			dy := math.Abs(float64(normals[i].Y - normals[j].Y))
+			dz := math.Abs(float64(normals[i].Z - normals[j].Z))
+			if dx < nT && dy < nT && dz < nT {
+				for k := 0; k < len(faces); k++ {
+					for l := 0; l < int(faces[k].edges); l++ {
+						if faces[k].n[l] == uint32(j) {
+							faces[k].n[l] = uint32(i)
 						}
-						normals[j].flushed = true
 					}
 				}
+				normals[j].flushed = true
+				dupeN++
 			}
 		}
 	}
 	for i := 0; i < len(normals); i++ {
 		if normals[i].flushed {
 			normals = RemoveAtIndex(normals, i)
-			dupeN++
+			for j := 0; j < len(faces); j++ {
+				for l := 0; l < int(faces[j].edges); l++ {
+					if faces[j].n[l] > uint32(i) {
+						faces[j].n[l]--
+					}
+				}
+			}
 			i--
 		}
 	}
 
 	// UVS
 	for i := 0; i < len(textureCoords); i++ {
-		if !textureCoords[i].flushed {
-			for j := 0; j < len(textureCoords); j++ {
-				if i != j {
-					du := math.Abs(float64(textureCoords[i].U - textureCoords[j].U))
-					dv := math.Abs(float64(textureCoords[i].V - textureCoords[j].V))
-					if du < uvT && dv < uvT {
-						for k := 0; k < len(faces); k++ {
-							for l := 0; l < int(faces[k].edges); l++ {
-								if faces[k].uv[l] == uint32(j) {
-									faces[k].uv[l] = uint32(i)
-								}
-							}
+		if textureCoords[i].flushed {
+			continue
+		}
+		for j := i + 1; j < len(textureCoords); j++ {
+			du := math.Abs(float64(textureCoords[i].U - textureCoords[j].U))
+			dv := math.Abs(float64(textureCoords[i].V - textureCoords[j].V))
+			if du < uvT && dv < uvT {
+				for k := 0; k < len(faces); k++ {
+					for l := 0; l < int(faces[k].edges); l++ {
+						if faces[k].uv[l] == uint32(j) {
+							faces[k].uv[l] = uint32(i)
 						}
-						textureCoords[j].flushed = true
 					}
 				}
+				textureCoords[j].flushed = true
+				dupeU++
 			}
 		}
 	}
 	for i := 0; i < len(textureCoords); i++ {
 		if textureCoords[i].flushed {
 			textureCoords = RemoveAtIndex(textureCoords, i)
-			dupeU++
+			for j := 0; j < len(faces); j++ {
+				for l := 0; l < int(faces[j].edges); l++ {
+					if faces[j].uv[l] > uint32(i) {
+						faces[j].uv[l]--
+					}
+				}
+			}
 			i--
 		}
 	}
@@ -920,7 +938,7 @@ func main() {
 
 	// If required, de-dupe vertices, uvs and normals
 	if *dPtr {
-		DeDupe(0.0001, 0.0001, 0.00001)
+		DeDupe(0.0001, 0.00001, 0.00001)
 	}
 
 	// Optimize the mesh data.
