@@ -538,3 +538,59 @@ func Pic(dx, dy int) [][]uint8 {
 	}
 	return result
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+GO WHINGE
+No function overloading
+This isn't the end of the world to me, but it does lead to situations that force you
+to contrive names for functions that include the type.
+not really relevant if you're prepared to use generics to replace it
+
+:=
+
+Enforcing the formatting of if/else/else if and not being able to add comments to an else
+or else if is stupid - so is the rationale that else is not a stand alone statement..duh,
+that is true for ANY language and has no bearing on the whitespace formatting restriction
+
+math lib does not support float32 and int .. ie ABS ...!?!
+
+interface conformance checking - Go struct can implement an interface explictly, however
+for it to work it's all or nothing, so why not just have an implements keyword? - currently,
+the check is done based purely on method name/signature - so if two interfaces have a func like
+Notify() - this is semantically ambiguous
+
+module vs package semantic naming ... whats in a name? it matters - modules
+don't logically or semantically mean a higher order grouping that a package,
+they should have picked something like "bundle" or "release" to support versioning
+
+lack of visibility control for variables and functions, no internal/private/public
+
+forcing capital letter names as exports
+
+lack of built-in enum support, iota isn't great and pollutes the namespace with constants
+
+no ability to specify or control memory alignment
+
+pointers are NOT pointers - they're just by reference, semantics and naming matter.. say what you 
+mean and mean what you say damn it
+
+slices are pretending to be like std::vector or proper container classes, but missing a lot
+of basic functionality, like removing elements
+
+ranged for loop only evaluate length once, so cannot account for changes in the length of the 
+slice being iterated over... which you'd expect to be safe at least for growing slice
+
+iterators... are.... awful
+
+no ternary operator... why?!?

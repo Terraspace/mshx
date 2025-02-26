@@ -8,14 +8,17 @@ type Vertex struct {
 
 type Normal struct {
 	X, Y, Z, W float32
+	flushed    bool
 }
 
 type TextureCoord struct {
 	U, V, W float32
+	flushed bool
 }
 
 type Tangent struct {
 	tan, bitan Normal
+	flushed    bool
 }
 
 type BoundSphere struct {
@@ -37,6 +40,7 @@ type Face struct {
 	materialID   uint32
 	materialName string
 	mortonCode   uint32
+	complete     bool
 }
 
 const ILLUM0 uint32 = 0   // Color on and Ambient off

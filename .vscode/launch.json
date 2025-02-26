@@ -15,8 +15,10 @@
             "args": [
                 "-q",
                 "2",
-                "lime_124.obj",
-                "test.data",
+                "-mo",
+                "-d",
+                "Plain.obj",
+                "test.dat",
                 "> out.log",
             ]
         }

@@ -26,6 +26,7 @@ var boundSphere BoundSphere
 
 var vertexType uint32 = 0
 
+var dPtr *bool
 var moPtr *bool
 var qPtr *int
 var lePtr *bool
@@ -42,6 +43,7 @@ func ParseCommandLine() bool {
 	bePtr = flag.Bool("be", false, "Output data as big endian")
 	silentPtr = flag.Bool("silent", false, "Do not output any messages")
 	moPtr = flag.Bool("mo", false, "Optimise mesh data")
+	dPtr = flag.Bool("d", false, "Remove duplicate vertices/normals/uvs")
 	qPtr = flag.Int("q", 0, "0=No quad validation, 1=Validate quad faces and fail on error, 2=Validate quad faces and convert degenrate quads to triangles, 3=Convert all quad faces to triangles")
 	flag.Parse()
 
@@ -370,6 +372,7 @@ func ProcessOBJFile(inputFile *os.File) error {
 			}
 		case "f":
 			var face Face
+			face.complete = false
 			if len(lineParts) == 4 {
 				face.edges = 3
 			} else if len(lineParts) == 5 {
@@ -505,7 +508,7 @@ func (f *Face) ValidateQuad() error {
 }
 
 func RemoveAtIndex[T any](s []T, index int) []T {
-	return append(s[:index], s[index+1:]...) // Remove element at index
+	return slices.Delete(s, index, index+1) // Remove element at index
 }
 
 func ConvertQuadToTriangles(f *Face) {
@@ -566,6 +569,96 @@ func interleaveBits(x uint32) uint32 {
 	return x
 }
 
+func DeDupe(vT, nT, uvT float64) {
+	// Vertices
+	for i := 0; i < len(vertices); i++ {
+		if !vertices[i].flushed {
+			for j := 0; j < len(vertices); j++ {
+				if i != j {
+					dx := vertices[i].X - vertices[j].X
+					dy := vertices[i].Y - vertices[j].Y
+					dz := vertices[i].Z - vertices[j].Z
+					d := math.Sqrt(float64(dx*dx + dy*dy + dz*dz))
+					if d < vT {
+						for k := 0; k < len(faces); k++ {
+							for l := 0; l < int(faces[k].edges); l++ {
+								if faces[k].v[l] == uint32(j) {
+									faces[k].v[l] = uint32(i)
+								}
+							}
+						}
+						vertices[j].flushed = true
+					}
+				}
+			}
+		}
+	}
+	for i := 0; i < len(vertices); i++ {
+		if vertices[i].flushed {
+			vertices = RemoveAtIndex(vertices, i)
+			i--
+		}
+	}
+
+	// Normals
+	for i := 0; i < len(normals); i++ {
+		if !normals[i].flushed {
+			for j := 0; j < len(normals); j++ {
+				if i != j {
+					dx := math.Abs(float64(normals[i].X - normals[j].X))
+					dy := math.Abs(float64(normals[i].Y - normals[j].Y))
+					dz := math.Abs(float64(normals[i].Z - normals[j].Z))
+					if dx < nT && dy < nT && dz < nT {
+						for k := 0; k < len(faces); k++ {
+							for l := 0; l < int(faces[k].edges); l++ {
+								if faces[k].n[l] == uint32(j) {
+									faces[k].n[l] = uint32(i)
+								}
+							}
+						}
+						normals[j].flushed = true
+					}
+				}
+			}
+		}
+	}
+	for i := 0; i < len(normals); i++ {
+		if normals[i].flushed {
+			normals = RemoveAtIndex(normals, i)
+			i--
+		}
+	}
+
+	// UVS
+	for i := 0; i < len(textureCoords); i++ {
+		if !textureCoords[i].flushed {
+			for j := 0; j < len(textureCoords); j++ {
+				if i != j {
+					du := math.Abs(float64(textureCoords[i].U - textureCoords[j].U))
+					dv := math.Abs(float64(textureCoords[i].V - textureCoords[j].V))
+					if du < uvT && dv < uvT {
+						for k := 0; k < len(faces); k++ {
+							for l := 0; l < int(faces[k].edges); l++ {
+								if faces[k].uv[l] == uint32(j) {
+									faces[k].uv[l] = uint32(i)
+								}
+							}
+						}
+						textureCoords[j].flushed = true
+					}
+				}
+			}
+		}
+	}
+	for i := 0; i < len(textureCoords); i++ {
+		if textureCoords[i].flushed {
+			textureCoords = RemoveAtIndex(textureCoords, i)
+			i--
+		}
+	}
+
+}
+
 func OptimiseMesh() {
 	// Use the bounding sphere to define a conservative spatial extent for the mesh
 	var extents = [6]float32{boundSphere.center.X - boundSphere.radius, boundSphere.center.Y - boundSphere.radius, boundSphere.center.Z - boundSphere.radius,
@@ -586,9 +679,9 @@ func OptimiseMesh() {
 		cz /= float32(faces[i].edges)
 
 		// Normalize the centroid to [0.0 - 1.0] within the bounding sphere range
-		cx = cx - extents[0]/(extents[3]-extents[0])
-		cy = cy - extents[1]/(extents[4]-extents[1])
-		cz = cz - extents[2]/(extents[5]-extents[2])
+		cx = (cx - extents[0]) / (extents[3] - extents[0])
+		cy = (cy - extents[1]) / (extents[4] - extents[1])
+		cz = (cz - extents[2]) / (extents[5] - extents[2])
 
 		// Quantize the normalized value in the range [0 - 1024]
 		var icx uint32 = uint32(cx * 1024.0)
@@ -608,6 +701,10 @@ func OptimiseMesh() {
 		return 0
 	})
 
+	// Setup which faces have been processed
+	for i := 0; i < len(faces); i++ {
+		faces[i].complete = false
+	}
 	// Create a lookup of all the faces that use a particular vertex for faster
 	// updating when we need to remap the vertex indices.
 	vertexFaceUse := make([][]uint32, len(vertices))
@@ -617,7 +714,7 @@ func OptimiseMesh() {
 			vertexFaceUse[vidx] = append(vertexFaceUse[vidx], uint32(i))
 		}
 	}
-
+	// Remap face->vertex references
 	var newVertices = []Vertex{}
 	var curIndex = 0
 	for i := 0; i < len(faces); i++ {
@@ -626,21 +723,103 @@ func OptimiseMesh() {
 			if !vertices[vidx].flushed {
 				for k := 0; k < len(vertexFaceUse[vidx]); k++ {
 					face := faces[vertexFaceUse[vidx][k]]
-					for l := 0; l < int(face.edges); l++ {
-						if face.v[l] == vidx {
-							face.v[l] = uint32(curIndex)
+					if !face.complete {
+						for l := 0; l < int(face.edges); l++ {
+							if face.v[l] == vidx {
+								face.v[l] = uint32(curIndex)
+							}
 						}
 					}
 				}
-				RemoveAtIndex(vertexFaceUse, int(vidx))
+				vertexFaceUse[vidx] = []uint32{}
 				newVertices = append(newVertices, vertices[vidx])
-				vertices[faces[i].v[j]].flushed = true
+				vertices[vidx].flushed = true
 				curIndex++
 			}
 		}
+		faces[i].complete = true
 	}
-
 	vertices = newVertices
+
+	// Setup which faces have been processed
+	for i := 0; i < len(faces); i++ {
+		faces[i].complete = false
+	}
+	// Create a lookup of all the faces that use a particular vertex for faster
+	// updating when we need to remap the vertex indices.
+	normalFaceUse := make([][]uint32, len(normals))
+	for i := 0; i < len(faces); i++ {
+		for j := 0; j < int(faces[i].edges); j++ {
+			nidx := faces[i].n[j]
+			normalFaceUse[nidx] = append(normalFaceUse[nidx], uint32(i))
+		}
+	}
+	// Remap face->normal references
+	var newNormals = []Normal{}
+	curIndex = 0
+	for i := 0; i < len(faces); i++ {
+		for j := 0; j < int(faces[i].edges); j++ {
+			nidx := faces[i].n[j]
+			if !normals[nidx].flushed {
+				for k := 0; k < len(normalFaceUse[nidx]); k++ {
+					face := faces[normalFaceUse[nidx][k]]
+					if !face.complete {
+						for l := 0; l < int(face.edges); l++ {
+							if face.n[l] == nidx {
+								face.n[l] = uint32(curIndex)
+							}
+						}
+					}
+				}
+				normalFaceUse[nidx] = []uint32{}
+				newNormals = append(newNormals, normals[nidx])
+				normals[nidx].flushed = true
+				curIndex++
+			}
+		}
+		faces[i].complete = true
+	}
+	normals = newNormals
+
+	// Setup which faces have been processed
+	for i := 0; i < len(faces); i++ {
+		faces[i].complete = false
+	}
+	// Create a lookup of all the faces that use a particular vertex for faster
+	// updating when we need to remap the vertex indices.
+	uvFaceUse := make([][]uint32, len(textureCoords))
+	for i := 0; i < len(faces); i++ {
+		for j := 0; j < int(faces[i].edges); j++ {
+			tidx := faces[i].uv[j]
+			uvFaceUse[tidx] = append(uvFaceUse[tidx], uint32(i))
+		}
+	}
+	// Remap face->uv references
+	var newTextureCoords = []TextureCoord{}
+	curIndex = 0
+	for i := 0; i < len(faces); i++ {
+		for j := 0; j < int(faces[i].edges); j++ {
+			tidx := faces[i].uv[j]
+			if !textureCoords[tidx].flushed {
+				for k := 0; k < len(uvFaceUse[tidx]); k++ {
+					face := faces[uvFaceUse[tidx][k]]
+					if !face.complete {
+						for l := 0; l < int(face.edges); l++ {
+							if face.uv[l] == tidx {
+								face.uv[l] = uint32(curIndex)
+							}
+						}
+					}
+				}
+				uvFaceUse[tidx] = []uint32{}
+				newTextureCoords = append(newTextureCoords, textureCoords[tidx])
+				textureCoords[tidx].flushed = true
+				curIndex++
+			}
+		}
+		faces[i].complete = true
+	}
+	textureCoords = newTextureCoords
 }
 
 func main() {
@@ -722,6 +901,14 @@ func main() {
 		}
 	}
 
+	// Generate the bounding sphere.
+	GenerateBoundingSphere()
+
+	// If required, de-dupe vertices, uvs and normals
+	if *dPtr {
+		DeDupe(0.0001, 0.0001, 0.00001)
+	}
+
 	// Optimize the mesh data.
 	if *moPtr {
 		if !*silentPtr {
@@ -734,9 +921,6 @@ func main() {
 			}
 		}
 	}
-
-	// Generate the bounding sphere.
-	GenerateBoundingSphere()
 
 	// Write the output file.
 	fmt.Println("Writing output file...")
