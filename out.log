@@ -2789,6 +2789,7 @@ Generated Bounding Sphere: {{0 0 0 1 0 0 0 0 false} 171.1537}
 Removed 0 duplicate vertices.
 Removed 164 duplicate normals.
 Removed 0 duplicate texture coords.
+Total vertex error:  2619930045325
 Faces after mesh optimsation:
 {3 [0 1 2] [0 1 2] [] [0 1 2] 0 material_0 16545564 true}
 {3 [0 4 1] [0 4 1] [] [0 4 1] 0 material_0 16545567 true}
@@ -3458,5 +3459,6 @@ Faces after mesh optimsation:
 {3 [470 371 420] [313 213 308] [] [445 452 464] 0 material_0 1057196243 true}
 {3 [470 477 476] [313 189 313] [] [445 387 477] 0 material_0 1057196256 true}
 {3 [470 476 371] [313 313 213] [] [445 477 452] 0 material_0 1057196259 true}
+Total vertex error:  2680059596507
 Writing output file...
 Done.

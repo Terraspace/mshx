@@ -941,6 +941,14 @@ func main() {
 		DeDupe(0.0001, 0.00001, 0.00001)
 	}
 
+	var totalErr int = 0
+	for i := 0; i < len(faces); i++ {
+		for j := 1; j < int(faces[i].edges); j++ {
+			totalErr += int(faces[i].v[j] - faces[i].v[j-1])
+		}
+	}
+	fmt.Println("Total vertex error: ", totalErr)
+
 	// Optimize the mesh data.
 	if *moPtr {
 		if !*silentPtr {
@@ -953,6 +961,14 @@ func main() {
 			}
 		}
 	}
+
+	totalErr = 0
+	for i := 0; i < len(faces); i++ {
+		for j := 1; j < int(faces[i].edges); j++ {
+			totalErr += int(faces[i].v[j] - faces[i].v[j-1])
+		}
+	}
+	fmt.Println("Total vertex error: ", totalErr)
 
 	// Write the output file.
 	fmt.Println("Writing output file...")
