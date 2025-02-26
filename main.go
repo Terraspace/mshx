@@ -942,12 +942,14 @@ func main() {
 	}
 
 	var totalErr int = 0
+	var curIdx int = int(faces[0].v[0])
 	for i := 0; i < len(faces); i++ {
-		for j := 1; j < int(faces[i].edges); j++ {
-			totalErr += int(faces[i].v[j] - faces[i].v[j-1])
+		for j := 0; j < int(faces[i].edges); j++ {
+			totalErr += int(math.Abs(float64(int(faces[i].v[j]) - curIdx)))
+			curIdx = int(faces[i].v[j])
 		}
 	}
-	fmt.Println("Total vertex error: ", totalErr)
+	fmt.Println("Total vertex stride distance: ", totalErr)
 
 	// Optimize the mesh data.
 	if *moPtr {
@@ -963,12 +965,14 @@ func main() {
 	}
 
 	totalErr = 0
+	curIdx = int(faces[0].v[0])
 	for i := 0; i < len(faces); i++ {
-		for j := 1; j < int(faces[i].edges); j++ {
-			totalErr += int(faces[i].v[j] - faces[i].v[j-1])
+		for j := 0; j < int(faces[i].edges); j++ {
+			totalErr += int(math.Abs(float64(int(faces[i].v[j]) - curIdx)))
+			curIdx = int(faces[i].v[j])
 		}
 	}
-	fmt.Println("Total vertex error: ", totalErr)
+	fmt.Println("Total vertex stride distance: ", totalErr)
 
 	// Write the output file.
 	fmt.Println("Writing output file...")
