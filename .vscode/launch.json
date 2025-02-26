@@ -17,7 +17,7 @@
                 "2",
                 "-mo",
                 "-d",
-                "Plain.obj",
+                "test.obj",
                 "test.dat",
                 "> out.log",
             ]

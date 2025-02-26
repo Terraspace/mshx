@@ -338,6 +338,7 @@ func ProcessOBJFile(inputFile *os.File) error {
 			}
 		case "vt":
 			var textureCoord TextureCoord
+			textureCoord.flushed = false
 			if len(lineParts) == 2 {
 				fmt.Sscanf(line, "vt %f", &textureCoord.U)
 				textureCoord.V = 0.0
@@ -352,6 +353,7 @@ func ProcessOBJFile(inputFile *os.File) error {
 			}
 		case "vn":
 			var normal Normal
+			normal.flushed = false
 			fmt.Sscanf(line, "vn %f %f %f", &normal.X, &normal.Y, &normal.Z)
 			normal.W = 0.0
 			normal.normalize()
